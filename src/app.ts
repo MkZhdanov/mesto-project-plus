@@ -1,8 +1,7 @@
 import express, { json, Request, Response, NextFunction } from "express";
 import mongoose, { ObjectId } from "mongoose";
 import router from "./routes";
-
-import { getCard } from "./controllers/cards";
+import helmet from "helmet";
 
 declare global {
   namespace Express {
@@ -18,6 +17,7 @@ const { PORT = 3000 } = process.env;
 
 const app = express();
 
+app.use(helmet());
 app.use(json());
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.user = {
