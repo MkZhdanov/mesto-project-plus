@@ -7,7 +7,7 @@ export const getUser = async (req: Request, res: Response) => {
     const users = await User.find({});
     return res.send(users);
   } catch (err) {
-    return res.status(400).send(err);
+    return res.status(500).send(err);
   }
 };
 
@@ -62,7 +62,7 @@ export const updateUser = async (req: Request, res: Response) => {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { name, about },
-      { new: true }
+      { new: true, runValidators: true }
     ).orFail(() => {
       const error = new Error("Пользователь не найден");
       error.name = "notFoundError";
@@ -87,7 +87,7 @@ export const updateUserAvatar = async (req: Request, res: Response) => {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { avatar },
-      { new: true }
+      { new: true, runValidators: true }
     ).orFail(() => {
       const error = new Error("Пользователь не найден");
       error.name = "notFoundError";
