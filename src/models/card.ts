@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
 import validator from "validator";
 
-interface ICard {
+export interface ICard {
   name: string;
   link: string;
   owner: Schema.Types.ObjectId;

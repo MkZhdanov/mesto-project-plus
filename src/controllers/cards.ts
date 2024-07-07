@@ -1,56 +1,67 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { Error as MongooseError, ObjectId } from "mongoose";
 import Card from "../models/card";
+import { CustomRequest, OwnerRequest, ITokenPayload } from "../types/types";
+import BadRequestError from "../errors/bad-request-error";
+import NotFoundError from "../errors/not-found-error";
+import ForbiddenError from "../errors/forbidden-error";
 
-export const getCard = async (req: Request, res: Response) => {
-  try {
-    const cards = await Card.find({});
-    return res.send(cards);
-  } catch (err) {
-    return res.status(500).send(err);
-  }
+export const getCard = (req: Request, res: Response, next: NextFunction) => {
+  Card.find({})
+    .then((cards) => res.send({ data: cards }))
+    .catch(next);
 };
 
-export const createCard = async (req: Request, res: Response) => {
+export const createCard = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    console.log(req.user._id);
-    const owner = req.user?._id;
+    const owner = req.user;
     const { name, link } = req.body;
     return res.status(201).send(await Card.create({ name, link, owner }));
   } catch (err) {
     if (err instanceof MongooseError.ValidationError) {
-      return res.status(400).send(err);
+      return next(new BadRequestError("BadRequestError"));
     }
-    return res.status(500).send(err);
+    return next(err);
   }
 };
 
-export const deleteCard = async (req: Request, res: Response) => {
+export const resOk = <T>(res: Response, data: T) => {
+  res.status(200).send(data);
+};
+
+export const deleteCard = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId).orFail(() => {
-      const error = new Error("Карточка не найдена");
-      error.name = "notFoundError";
-      return error;
-    });
-    if (card.owner.toString() !== req.user?._id) {
-      const error = new Error("Удаление чужих карточек запрещено");
-      error.name = "requestError";
-      return error;
+    const { _id } = req.user as ITokenPayload;
+    const card = await Card.findById(cardId).orFail(
+      () => new NotFoundError("Not Found Error")
+    );
+    if (card.owner.toString() !== _id) {
+      return next(new ForbiddenError("Удаление чужих карточек запрещено"));
+    } else {
+      return Card.deleteOne({ _id: cardId }).then(() => resOk(res, card));
     }
-    return res.send(card);
-  } catch (err) {
-    if (err instanceof MongooseError.CastError) {
-      return res.status(400).send(err);
+  } catch (error) {
+    if (error instanceof MongooseError.CastError) {
+      next(new BadRequestError("BadRequestError"));
     }
-    if (err instanceof Error && err.name === "notFoundError") {
-      return res.status(404).send(err);
-    }
-    return res.status(500).send(err);
+    return next(error);
   }
 };
 
-export const likeCard = async (req: Request, res: Response) => {
+export const likeCard = async (
+  req: OwnerRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user?._id;
     const { cardId } = req.params;
@@ -58,24 +69,24 @@ export const likeCard = async (req: Request, res: Response) => {
       cardId,
       { $addToSet: { likes: userId as unknown as ObjectId } },
       { new: true }
-    ).orFail(() => {
-      const error = new Error("Пользователь не найден");
-      error.name = "notFoundError";
-      return error;
-    });
+    ).orFail(() => new NotFoundError("Not Found Error"));
     return res.send(card);
   } catch (err) {
     if (err instanceof MongooseError.CastError) {
-      return res.status(400).send(err);
+      return next(new BadRequestError("BadRequestError"));
     }
     if (err instanceof Error && err.name === "notFoundError") {
-      return res.status(404).send(err);
+      return next(new NotFoundError("Not Found Error"));
     }
-    return res.status(500).send(err);
+    return next(err);
   }
 };
 
-export const dislikeCard = async (req: Request, res: Response) => {
+export const dislikeCard = async (
+  req: OwnerRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user?._id;
     const { cardId } = req.params;
@@ -83,19 +94,15 @@ export const dislikeCard = async (req: Request, res: Response) => {
       cardId,
       { $pull: { likes: userId as unknown as ObjectId } },
       { new: true }
-    ).orFail(() => {
-      const error = new Error("Пользователь не найден");
-      error.name = "notFoundError";
-      return error;
-    });
+    ).orFail(() => new NotFoundError("Not Found Error"));
     return res.send(card);
   } catch (err) {
     if (err instanceof MongooseError.CastError) {
-      return res.status(400).send(err);
+      return next(new BadRequestError("BadRequestError"));
     }
     if (err instanceof Error && err.name === "notFoundError") {
-      return res.status(404).send(err);
+      return next(new NotFoundError("Not Found Error"));
     }
-    return res.status(500).send(err);
+    return next(err);
   }
 };
