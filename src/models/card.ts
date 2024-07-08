@@ -28,10 +28,12 @@ const cardSchema = new Schema<ICard>(
     owner: {
       type: Schema.Types.ObjectId,
       required: [true, "Поле обязательно для заполнения"],
+      ref: "user",
     },
     likes: {
       type: [Schema.Types.ObjectId],
       default: [],
+      ref: "user",
     },
     createdAt: {
       type: Date,

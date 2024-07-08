@@ -31,7 +31,7 @@ export const getUserById = async (
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).orFail(
-      () => new UnauthorizedError("Ошибка аутентификации")
+      () => new NotFoundError("Пользователь не найден")
     );
     return res.send(user);
   } catch (err) {
@@ -53,7 +53,7 @@ export const getCurrentUser = async (
     );
     return res.send(currentUser);
   } catch (err) {
-    if (err instanceof MongooseError.ValidationError) {
+    if (err instanceof MongooseError.CastError) {
       return next(new BadRequestError("Bad Request"));
     }
     return next(err);
@@ -137,9 +137,6 @@ export const updateUser = async (
     if (err instanceof MongooseError.ValidationError) {
       return next(new BadRequestError("Bad Request"));
     }
-    if (err instanceof Error && err.name === "Not Found Error") {
-      return next(new NotFoundError("Not Found Error"));
-    }
     return next(err);
   }
 };
@@ -161,9 +158,6 @@ export const updateUserAvatar = async (
   } catch (err) {
     if (err instanceof MongooseError.ValidationError) {
       return next(new BadRequestError("Bad Request"));
-    }
-    if (err instanceof Error && err.name === "Not Found Error") {
-      return next(new NotFoundError("Not Found Error"));
     }
     return next(err);
   }
