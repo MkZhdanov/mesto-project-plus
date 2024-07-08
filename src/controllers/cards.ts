@@ -29,10 +29,6 @@ export const createCard = async (
   }
 };
 
-export const resOk = <T>(res: Response, data: T) => {
-  res.status(200).send(data);
-};
-
 export const deleteCard = async (
   req: CustomRequest,
   res: Response,
@@ -47,7 +43,8 @@ export const deleteCard = async (
     if (card.owner.toString() !== _id) {
       return next(new ForbiddenError("Удаление чужих карточек запрещено"));
     } else {
-      return Card.deleteOne({ _id: cardId }).then(() => resOk(res, card));
+      await card.deleteOne();
+      return res.send(card);
     }
   } catch (error) {
     if (error instanceof MongooseError.CastError) {
@@ -75,9 +72,6 @@ export const likeCard = async (
     if (err instanceof MongooseError.CastError) {
       return next(new BadRequestError("BadRequestError"));
     }
-    if (err instanceof Error && err.name === "notFoundError") {
-      return next(new NotFoundError("Not Found Error"));
-    }
     return next(err);
   }
 };
@@ -99,9 +93,6 @@ export const dislikeCard = async (
   } catch (err) {
     if (err instanceof MongooseError.CastError) {
       return next(new BadRequestError("BadRequestError"));
-    }
-    if (err instanceof Error && err.name === "notFoundError") {
-      return next(new NotFoundError("Not Found Error"));
     }
     return next(err);
   }
